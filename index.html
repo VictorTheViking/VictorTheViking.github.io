@@ -5,87 +5,102 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Handball Bundesliga Hub</title>
     <style>
+        /* General styles */
         body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f7f9fc;
-            color: #333;
+            font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
+            background: linear-gradient(120deg, #003366, #0066cc); /* Sporty blue gradient */
+            color: white;
         }
         header {
-            background-color: #0056b3;
+            background-color: #ff4500; /* Vibrant orange */
             color: white;
+            padding: 20px;
             text-align: center;
-            padding: 20px 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
         }
         header h1 {
             margin: 0;
-            font-size: 2rem;
+            font-size: 2.5rem;
+            letter-spacing: 1px;
         }
         .container {
             max-width: 1200px;
             margin: 20px auto;
             padding: 20px;
-            background: white;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.8); /* Transparent black */
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
         }
-        .live-match {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background-color: #eaf4ff;
-            border: 1px solid #0056b3;
-            padding: 15px;
-            border-radius: 8px;
+        h2 {
+            text-align: center;
+            font-size: 1.8rem;
             margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            border-bottom: 2px solid #ff4500;
+            display: inline-block;
+            padding-bottom: 5px;
         }
-        .live-match h2 {
-            margin: 0;
-            font-size: 1.5rem;
-            color: #0056b3;
-        }
-        .live-score {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #0056b3;
-        }
+        /* Table styles */
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            margin: 20px 0;
+            color: white;
         }
         table th, table td {
             border: 1px solid #ddd;
             text-align: center;
-            padding: 12px;
+            padding: 10px;
         }
         table th {
-            background-color: #0056b3;
+            background-color: #ff4500;
             color: white;
         }
         .qualification {
-            background-color: #d4edda;
+            background-color: rgba(34, 139, 34, 0.8); /* Green for qualification */
         }
         .relegation {
-            background-color: #f8d7da;
+            background-color: rgba(220, 20, 60, 0.8); /* Red for relegation */
+        }
+        /* Live match section */
+        .live-matches {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(255, 69, 0, 0.9); /* Orange for live updates */
+            border-radius: 10px;
+            color: white;
+        }
+        .live-matches h2 {
+            margin-bottom: 15px;
+        }
+        .match {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2); /* Semi-transparent white */
+            margin: 10px auto;
+            border-radius: 5px;
+            font-size: 1.2rem;
+        }
+        .match span {
+            flex: 1;
+            text-align: center;
+        }
+        .match .score {
+            font-weight: bold;
+            font-size: 1.4rem;
         }
         footer {
             text-align: center;
             padding: 10px;
-            background-color: #f1f1f1;
-            margin-top: 20px;
+            background-color: #003366;
             font-size: 0.9rem;
-            color: #555;
-        }
-        @media (max-width: 768px) {
-            .live-match {
-                flex-direction: column;
-                text-align: center;
-            }
-            table {
-                font-size: 14px;
-            }
+            color: #ddd;
         }
     </style>
 </head>
@@ -94,56 +109,45 @@
         <h1>Handball Bundesliga Hub</h1>
     </header>
     <div class="container">
-        <!-- Live Match Section -->
-        <div class="live-match">
-            <h2>Live Match: Team A vs Team B</h2>
-            <div class="live-score">32 : 29</div>
-        </div>
-        <!-- League Table -->
+        <h2>League Table</h2>
         <table>
             <thead>
                 <tr>
                     <th>Position</th>
                     <th>Team</th>
-                    <th>Points</th>
-                    <th>Goals Scored</th>
-                    <th>Goals Conceded</th>
+                    <th>MP</th>
+                    <th>GF</th>
+                    <th>GA</th>
+                    <th>GD</th>
+                    <th>Pts</th>
                 </tr>
             </thead>
             <tbody>
-                <tr class="qualification">
-                    <td>1</td>
-                    <td>Team A</td>
-                    <td>40</td>
-                    <td>120</td>
-                    <td>80</td>
-                </tr>
-                <tr>
-                    <td>2</td>
-                    <td>Team B</td>
-                    <td>38</td>
-                    <td>110</td>
-                    <td>85</td>
-                </tr>
-                <tr>
-                    <td>15</td>
-                    <td>Team Y</td>
-                    <td>12</td>
-                    <td>80</td>
-                    <td>120</td>
-                </tr>
-                <tr class="relegation">
-                    <td>16</td>
-                    <td>Team Z</td>
-                    <td>10</td>
-                    <td>70</td>
-                    <td>130</td>
-                </tr>
+                <tr class="qualification"><td>1</td><td>Melsungen</td><td>12</td><td>360</td><td>310</td><td>+50</td><td>20</td></tr>
+                <tr class="qualification"><td>2</td><td>Hannover-Burgdorf</td><td>12</td><td>373</td><td>330</td><td>+43</td><td>20</td></tr>
+                <tr class="qualification"><td>3</td><td>Füchse Berlin</td><td>12</td><td>413</td><td>351</td><td>+62</td><td>19</td></tr>
+                <tr><td>4</td><td>Flensburg-Handewitt</td><td>12</td><td>402</td><td>343</td><td>+59</td><td>17</td></tr>
+                <tr><td>5</td><td>Magdeburg</td><td>11</td><td>337</td><td>300</td><td>+37</td><td>16</td></tr>
+                <!-- More rows as needed -->
             </tbody>
         </table>
+        <div class="live-matches">
+            <h2>Live Matches</h2>
+            <div class="match">
+                <span>Füchse Berlin</span>
+                <span class="score">30 - 28</span>
+                <span>Magdeburg</span>
+            </div>
+            <div class="match">
+                <span>Melsungen</span>
+                <span class="score">25 - 25</span>
+                <span>THW Kiel</span>
+            </div>
+            <!-- Add more matches here -->
+        </div>
     </div>
     <footer>
-        © 2024 Handball Bundesliga Hub - All rights reserved.
+        © 2024 Handball Bundesliga Hub
     </footer>
 </body>
 </html>
