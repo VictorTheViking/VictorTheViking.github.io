@@ -1,55 +1,98 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Victor's ISS Tracker</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Victor's ISS Tracker</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/GLTFLoader.js"></script>
     <style>
         body, html {
             margin: 0;
             padding: 0;
             height: 100%;
-            font-family: Arial, sans-serif;
+            font-family: 'Roboto', Arial, sans-serif;
+            background: url('https://source.unsplash.com/1600x900/?space,stars') no-repeat center center fixed;
+            background-size: cover;
+            color: white;
         }
         #info {
-            background-color: #f4f4f4;
-            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
             text-align: center;
-            border-bottom: 2px solid #0077cc;
-        }
-        #threejs-container {
-            height: 400px;
-            width: 100%;
-            border: 2px solid #0077cc;
-            margin-bottom: 10px;
-        }
-        #map {
-            height: 50%;
+            padding: 20px;
         }
         h1 {
-            color: #0077cc;
+            font-size: 2.5rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 0;
+            color: #FFD700;
+        }
+        p {
+            font-size: 1.2rem;
+            margin: 5px 0;
+        }
+        #map {
+            height: calc(70vh - 100px);
+            margin-bottom: 20px;
+        }
+        #form-container {
+            text-align: center;
+            margin: 20px;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        input, button {
+            padding: 10px;
+            font-size: 1rem;
+            margin: 5px;
+            border-radius: 5px;
+            border: none;
+        }
+        button {
+            background-color: #FFD700;
+            color: black;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #ffa500;
+        }
+        #passover-results {
+            text-align: center;
+            margin: 20px;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
         }
     </style>
 </head>
 <body>
-    <!-- Info Section -->
+    <!-- Header Section -->
     <div id="info">
         <h1>Victor's ISS Tracker</h1>
-        <p>Tracking the International Space Station in real time!</p>
+        <p>Real-time visualization of the International Space Station and location-specific passover times</p>
     </div>
-
-    <!-- Three.js 3D Model Section -->
-    <div id="threejs-container"></div>
 
     <!-- Map Section -->
     <div id="map"></div>
 
+    <!-- Passover Form Section -->
+    <div id="form-container">
+        <h2>Find ISS Passover Times</h2>
+        <p>Enter a city name to see when the ISS will pass over that location.</p>
+        <form id="passover-form">
+            <input type="text" id="city" placeholder="Enter city name" required>
+            <button type="submit">Find Passover Times</button>
+        </form>
+        <div id="passover-results"></div>
+    </div>
+
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
+        const GEOCODING_API_KEY = "YOUR_OPENCAGE_API_KEY"; // Replace with your OpenCage Geocoding API key
+
         // Leaflet Map Setup
-        const map = L.map('map').setView([0, 0], 2);
+        const map = L.map('map').setView([0, 0], 3); // Default map view
 
         // Add OpenStreetMap tiles
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -60,7 +103,7 @@
         const issMarker = L.marker([0, 0]).addTo(map).bindPopup("Fetching ISS location...");
 
         // Trajectory Path
-        const trajectory = L.polyline([], { color: 'red' }).addTo(map);
+        const trajectory = L.polyline([], { color: 'red', weight: 2 }).addTo(map);
 
         // Fetch and Update ISS Data
         async function updateISSLocation() {
@@ -71,7 +114,7 @@
             // Update Marker Position and Popup
             issMarker.setLatLng([latitude, longitude])
                 .bindPopup(`
-                    ISS is here:<br>
+                    <strong>ISS Location:</strong><br>
                     Latitude: ${latitude.toFixed(2)}<br>
                     Longitude: ${longitude.toFixed(2)}<br>
                     Speed: ${velocity.toFixed(2)} km/h<br>
@@ -89,46 +132,52 @@
         updateISSLocation();
         setInterval(updateISSLocation, 5000);
 
-        // Three.js 3D Scene Setup
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / 400, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, 400);
-        document.getElementById('threejs-container').appendChild(renderer.domElement);
+        // Passover Form Handling
+        document.getElementById("passover-form").addEventListener("submit", async function (e) {
+            e.preventDefault();
 
-        // Add Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2); // Soft white light
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8); // Strong directional light
-        directionalLight.position.set(10, 10, 10); // Position the light above and to the side
-        scene.add(ambientLight, directionalLight);
+            const city = document.getElementById("city").value.trim();
+            const resultsDiv = document.getElementById("passover-results");
 
-        // Load the ISS Model
-        const loader = new THREE.GLTFLoader();
-        loader.load('iss.glb', function (gltf) {
-            const issModel = gltf.scene;
-
-            // Adjust size and position
-            issModel.scale.set(1.5, 1.5, 1.5); // Scale the model to fit the container
-            issModel.position.set(0, 0, 0); // Ensure it is centered
-
-            // Add a pivot for smooth spinning
-            const pivot = new THREE.Object3D();
-            pivot.add(issModel);
-            scene.add(pivot);
-
-            // Animate the Model
-            function animate() {
-                requestAnimationFrame(animate);
-                pivot.rotation.y += 0.01; // Smooth spinning
-                renderer.render(scene, camera);
+            if (!city) {
+                resultsDiv.innerHTML = "<p style='color: red;'>Please enter a city name.</p>";
+                return;
             }
-            animate();
-        }, undefined, function (error) {
-            console.error('Error loading the ISS model:', error);
-        });
 
-        // Position the Camera
-        camera.position.set(0, 0, 10); // Set camera to view the model correctly
+            try {
+                // Fetch coordinates using OpenCage Geocoding API
+                const geocodeResponse = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(city)}&key=${GEOCODING_API_KEY}`);
+                const geocodeData = await geocodeResponse.json();
+
+                if (geocodeData.results.length === 0) {
+                    resultsDiv.innerHTML = "<p style='color: red;'>City not found. Please try again.</p>";
+                    return;
+                }
+
+                const { lat, lng } = geocodeData.results[0].geometry;
+
+                // Fetch ISS passover times using Open Notify API
+                const response = await fetch(`http://api.open-notify.org/iss-pass.json?lat=${lat}&lon=${lng}`);
+                const data = await response.json();
+
+                if (data.message === "success") {
+                    const passoverTimes = data.response.map(pass => {
+                        const date = new Date(pass.risetime * 1000);
+                        return `<li>${date.toUTCString()} (Duration: ${pass.duration} seconds)</li>`;
+                    }).join("");
+
+                    resultsDiv.innerHTML = `
+                        <h3>Passover Times for ${city}:</h3>
+                        <ul>${passoverTimes}</ul>
+                    `;
+                } else {
+                    resultsDiv.innerHTML = "<p style='color: red;'>Unable to fetch passover times. Try again later.</p>";
+                }
+            } catch (error) {
+                console.error("Error fetching passover times:", error);
+                resultsDiv.innerHTML = "<p style='color: red;'>An error occurred. Please try again later.</p>";
+            }
+        });
     </script>
 </body>
 </html>
