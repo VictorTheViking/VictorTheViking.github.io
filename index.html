@@ -3,9 +3,132 @@
 <head>
     <title>Victor's ISS Tracker</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/GLTFLoader.js"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+        }
+        #info {
+            background-color: #f4f4f4;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid #0077cc;
+        }
+        #threejs-container {
+            height: 400px;
+            width: 100%;
+            border: 2px solid #0077cc;
+            margin-bottom: 10px;
+        }
+        #map {
+            height: 50%;
+        }
+        h1 {
+            color: #0077cc;
+        }
+    </style>
 </head>
 <body>
-    <h1>Welcome to Victor's Website!</h1>
-    <p>This is a placeholder website for now. We'll add the ISS tracker soon.</p>
+    <!-- Info Section -->
+    <div id="info">
+        <h1>Victor's ISS Tracker</h1>
+        <p>Tracking the International Space Station in real time!</p>
+    </div>
+
+    <!-- Three.js 3D Model Section -->
+    <div id="threejs-container"></div>
+
+    <!-- Map Section -->
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        // Leaflet Map Setup
+        const map = L.map('map').setView([0, 0], 2);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        // ISS Marker
+        const issMarker = L.marker([0, 0]).addTo(map).bindPopup("Fetching ISS location...");
+
+        // Trajectory Path
+        const trajectory = L.polyline([], { color: 'red' }).addTo(map);
+
+        // Fetch and Update ISS Data
+        async function updateISSLocation() {
+            const response = await fetch("https://api.wheretheiss.at/v1/satellites/25544");
+            const data = await response.json();
+            const { latitude, longitude, velocity, altitude } = data;
+
+            // Update Marker Position and Popup
+            issMarker.setLatLng([latitude, longitude])
+                .bindPopup(`
+                    ISS is here:<br>
+                    Latitude: ${latitude.toFixed(2)}<br>
+                    Longitude: ${longitude.toFixed(2)}<br>
+                    Speed: ${velocity.toFixed(2)} km/h<br>
+                    Altitude: ${altitude.toFixed(2)} km
+                `).openPopup();
+
+            // Update Trajectory Path
+            trajectory.addLatLng([latitude, longitude]);
+
+            // Re-center the Map
+            map.setView([latitude, longitude], 2);
+        }
+
+        // Update every 5 seconds
+        updateISSLocation();
+        setInterval(updateISSLocation, 5000);
+
+        // Three.js 3D Scene Setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / 400, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, 400);
+        document.getElementById('threejs-container').appendChild(renderer.domElement);
+
+        // Add Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2); // Soft white light
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8); // Strong directional light
+        directionalLight.position.set(10, 10, 10); // Position the light above and to the side
+        scene.add(ambientLight, directionalLight);
+
+        // Load the ISS Model
+        const loader = new THREE.GLTFLoader();
+        loader.load('iss.glb', function (gltf) {
+            const issModel = gltf.scene;
+
+            // Adjust size and position
+            issModel.scale.set(1.5, 1.5, 1.5); // Scale the model to fit the container
+            issModel.position.set(0, 0, 0); // Ensure it is centered
+
+            // Add a pivot for smooth spinning
+            const pivot = new THREE.Object3D();
+            pivot.add(issModel);
+            scene.add(pivot);
+
+            // Animate the Model
+            function animate() {
+                requestAnimationFrame(animate);
+                pivot.rotation.y += 0.01; // Smooth spinning
+                renderer.render(scene, camera);
+            }
+            animate();
+        }, undefined, function (error) {
+            console.error('Error loading the ISS model:', error);
+        });
+
+        // Position the Camera
+        camera.position.set(0, 0, 10); // Set camera to view the model correctly
+    </script>
 </body>
 </html>
