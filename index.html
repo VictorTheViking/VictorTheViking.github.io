@@ -72,19 +72,19 @@
             maxZoom: 17
         }).addTo(map);
 
-        // Custom ISS Icon
+        // ISS Icon
         const issIcon = L.icon({
             iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/d/d0/International_Space_Station.svg',
-            iconSize: [50, 50], // size of the icon
-            iconAnchor: [25, 25], // point of the icon which will correspond to marker's location
+            iconSize: [50, 50], // Size of the icon
+            iconAnchor: [25, 25] // Anchor the icon to its center
         });
 
         // ISS Marker
-        const issMarker = L.marker([0, 0], { icon: issIcon }).addTo(map).bindPopup("Fetching ISS location...");
-        const trajectory = L.polyline([], { color: 'red', weight: 2 }).addTo(map);
+        const issMarker = L.marker([0, 0], { icon: issIcon }).addTo(map);
 
-        // Store trajectory points
-        let trajectoryPoints = [];
+        // Trajectory and Prediction Lines
+        const trajectoryLine = L.polyline([], { color: 'red', weight: 2 }).addTo(map);
+        const predictionLine = L.polyline([], { color: 'yellow', weight: 2, dashArray: '5, 10' }).addTo(map);
 
         async function updateISS() {
             try {
@@ -92,26 +92,11 @@
                 const data = await response.json();
                 const { latitude, longitude, velocity, altitude } = data;
 
-                // Update ISS Marker and Popup
-                issMarker.setLatLng([latitude, longitude])
-                    .bindPopup(`
-                        <strong>ISS:</strong><br>
-                        Latitude: ${latitude.toFixed(2)}<br>
-                        Longitude: ${longitude.toFixed(2)}<br>
-                        Speed: ${velocity.toFixed(2)} km/h<br>
-                        Altitude: ${altitude.toFixed(2)} km
-                    `).openPopup();
+                // Update ISS Marker Position
+                issMarker.setLatLng([latitude, longitude]);
 
-                // Add point to trajectory
-                trajectoryPoints.push([latitude, longitude]);
-
-                // Keep only points within the last X hours (e.g., 1 hour)
-                const maxPoints = 720; // 1 hour of data with updates every 5 seconds
-                if (trajectoryPoints.length > maxPoints) {
-                    trajectoryPoints.shift();
-                }
-
-                trajectory.setLatLngs(trajectoryPoints);
+                // Update Trajectory Line
+                trajectoryLine.addLatLng([latitude, longitude]);
 
                 // Update Satellite Data Section
                 document.getElementById("iss-info").innerHTML = `
@@ -121,10 +106,36 @@
                     Speed: ${velocity.toFixed(2)} km/h<br>
                     Altitude: ${altitude.toFixed(2)} km
                 `;
+
+                // Calculate Future Prediction
+                updatePrediction(latitude, longitude, velocity);
+
             } catch (error) {
                 console.error("Error fetching ISS data:", error);
                 document.getElementById("iss-info").innerHTML = `<p style="color: red;">Error fetching ISS data. Please try again later.</p>`;
             }
+        }
+
+        function updatePrediction(lat, lon, velocity) {
+            const futurePoints = [];
+            const earthRadius = 6371; // Earth radius in km
+            const timeStep = 60; // seconds
+
+            for (let t = 1; t <= 60; t++) { // Predict for the next 60 minutes
+                const distance = velocity * (timeStep * t) / 3600; // Distance traveled in km
+                const angularDistance = distance / earthRadius;
+
+                const newLat = Math.asin(Math.sin(lat * Math.PI / 180) * Math.cos(angularDistance) +
+                    Math.cos(lat * Math.PI / 180) * Math.sin(angularDistance));
+                const newLon = lon + Math.atan2(
+                    Math.sin(angularDistance) * Math.cos(lat * Math.PI / 180),
+                    Math.cos(angularDistance) - Math.sin(lat * Math.PI / 180) * Math.sin(newLat)
+                );
+
+                futurePoints.push([newLat * 180 / Math.PI, newLon * 180 / Math.PI]);
+            }
+
+            predictionLine.setLatLngs(futurePoints);
         }
 
         // Update ISS position every 5 seconds
