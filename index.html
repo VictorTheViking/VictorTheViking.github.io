@@ -12,42 +12,91 @@
             padding: 0;
             height: 100%;
             font-family: 'Roboto', Arial, sans-serif;
-            background-color: #000;
+            background-color: black;
             color: white;
+            overflow: hidden;
         }
+
+        #stars {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: url('https://www.transparenttextures.com/patterns/stardust.png') repeat;
+            animation: starsMove 60s linear infinite;
+        }
+
+        @keyframes starsMove {
+            from {
+                background-position: 0 0;
+            }
+            to {
+                background-position: -10000px 10000px;
+            }
+        }
+
         #info {
             background-color: rgba(0, 0, 0, 0.9);
             text-align: center;
             padding: 20px;
             border-bottom: 3px solid #FFD700;
         }
+
         h1 {
             font-family: 'Orbitron', sans-serif;
             font-size: 3rem;
             color: #FFD700;
             margin: 0;
         }
+
         p {
             font-size: 1.2rem;
             margin: 0;
         }
+
         #map {
             height: 85vh;
             margin: 20px auto;
             border-radius: 10px;
             border: 3px solid #FFD700;
         }
-        #satellite-data {
-            text-align: center;
-            margin: 10px;
-            font-size: 1rem;
-            padding: 10px;
-            background-color: rgba(255, 255, 255, 0.1);
+
+        #dashboard {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
             border-radius: 10px;
+            border: 2px solid #FFD700;
+            z-index: 1000;
+            width: 250px;
+        }
+
+        #dashboard h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            color: #FFD700;
+        }
+
+        .trajectory-line {
+            stroke-dasharray: 5, 5;
+        }
+
+        .prediction-line {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
         }
     </style>
 </head>
 <body>
+    <div id="stars"></div>
     <!-- Header Section -->
     <div id="info">
         <h1>Victor's ISS Tracker</h1>
@@ -57,14 +106,16 @@
     <!-- Map Section -->
     <div id="map"></div>
 
-    <!-- Satellite Data -->
-    <div id="satellite-data">
-        <p id="iss-info">Fetching ISS data...</p>
+    <!-- Dashboard Section -->
+    <div id="dashboard">
+        <h2>Live ISS Data</h2>
+        <p id="live-data">Fetching ISS data...</p>
     </div>
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.0.0/satellite.min.js"></script>
     <script>
-        const map = L.map('map').setView([0, 0], 3);
+        const map = L.map('map', { worldCopyJump: true }).setView([0, 0], 3);
 
         // Add Satellite Map Layer
         L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
@@ -72,75 +123,70 @@
             maxZoom: 17
         }).addTo(map);
 
-        // ISS Icon
+        // ISS Marker
         const issIcon = L.icon({
             iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/d/d0/International_Space_Station.svg',
-            iconSize: [50, 50], // Size of the icon
-            iconAnchor: [25, 25] // Anchor the icon to its center
+            iconSize: [50, 32],
+            iconAnchor: [25, 16],
         });
+        const issMarker = L.marker([0, 0], { icon: issIcon }).addTo(map).bindPopup("Fetching ISS location...");
+        const trajectory = L.polyline([], { color: 'red', weight: 2, className: 'trajectory-line' }).addTo(map);
+        const prediction = L.polyline([], { color: 'yellow', dashArray: '10, 10', weight: 2, className: 'prediction-line' }).addTo(map);
 
-        // ISS Marker
-        const issMarker = L.marker([0, 0], { icon: issIcon }).addTo(map);
+        // TLE Data for ISS
+        const tleLine1 = "1 25544U 98067A   22348.51250000  .00005838  00000+0  11283-3 0  9995";
+        const tleLine2 = "2 25544  51.6432 338.3211 0007921  11.9283 348.1795 15.50009748378078";
 
-        // Trajectory and Prediction Lines
-        const trajectoryLine = L.polyline([], { color: 'red', weight: 2 }).addTo(map);
-        const predictionLine = L.polyline([], { color: 'yellow', weight: 2, dashArray: '5, 10' }).addTo(map);
+        function updateISS() {
+            const now = new Date();
 
-        async function updateISS() {
-            try {
-                const response = await fetch("https://api.wheretheiss.at/v1/satellites/25544");
-                const data = await response.json();
-                const { latitude, longitude, velocity, altitude } = data;
+            // Current ISS Position
+            const position = satellite.propagate(satellite.twoline2satrec(tleLine1, tleLine2), now);
+            const gmst = satellite.gstime(now);
+            const geoPosition = satellite.eciToGeodetic(position.position, gmst);
 
-                // Update ISS Marker Position
-                issMarker.setLatLng([latitude, longitude]);
+            const latitude = satellite.degreesLat(geoPosition.latitude);
+            const longitude = satellite.degreesLong(geoPosition.longitude);
 
-                // Update Trajectory Line
-                trajectoryLine.addLatLng([latitude, longitude]);
+            // Update ISS Marker and Trajectory
+            issMarker.setLatLng([latitude, longitude])
+                .bindPopup(`
+                    <div style="text-align:center;">
+                        <strong>International Space Station</strong><br>
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/e/e1/ISS_configuration_2021_-_Visicom.jpg" alt="ISS" width="100" style="border-radius:10px; margin:5px;"><br>
+                        Latitude: ${latitude.toFixed(2)}<br>
+                        Longitude: ${longitude.toFixed(2)}
+                    </div>
+                `);
 
-                // Update Satellite Data Section
-                document.getElementById("iss-info").innerHTML = `
-                    <strong>Current ISS Data:</strong><br>
-                    Latitude: ${latitude.toFixed(2)}<br>
-                    Longitude: ${longitude.toFixed(2)}<br>
-                    Speed: ${velocity.toFixed(2)} km/h<br>
-                    Altitude: ${altitude.toFixed(2)} km
-                `;
+            trajectory.addLatLng([latitude, longitude]);
 
-                // Calculate Future Prediction
-                updatePrediction(latitude, longitude, velocity);
+            // Prediction for the next 30 minutes
+            const predictionCoords = [];
+            for (let i = 1; i <= 30; i++) {
+                const futureTime = new Date(now.getTime() + i * 60000); // +1 minute intervals
+                const futurePosition = satellite.propagate(satellite.twoline2satrec(tleLine1, tleLine2), futureTime);
+                const futureGeoPosition = satellite.eciToGeodetic(futurePosition.position, gmst);
 
-            } catch (error) {
-                console.error("Error fetching ISS data:", error);
-                document.getElementById("iss-info").innerHTML = `<p style="color: red;">Error fetching ISS data. Please try again later.</p>`;
-            }
-        }
+                const futureLat = satellite.degreesLat(futureGeoPosition.latitude);
+                const futureLng = satellite.degreesLong(futureGeoPosition.longitude);
 
-        function updatePrediction(lat, lon, velocity) {
-            const futurePoints = [];
-            const earthRadius = 6371; // Earth radius in km
-            const timeStep = 60; // seconds
-
-            for (let t = 1; t <= 60; t++) { // Predict for the next 60 minutes
-                const distance = velocity * (timeStep * t) / 3600; // Distance traveled in km
-                const angularDistance = distance / earthRadius;
-
-                const newLat = Math.asin(Math.sin(lat * Math.PI / 180) * Math.cos(angularDistance) +
-                    Math.cos(lat * Math.PI / 180) * Math.sin(angularDistance));
-                const newLon = lon + Math.atan2(
-                    Math.sin(angularDistance) * Math.cos(lat * Math.PI / 180),
-                    Math.cos(angularDistance) - Math.sin(lat * Math.PI / 180) * Math.sin(newLat)
-                );
-
-                futurePoints.push([newLat * 180 / Math.PI, newLon * 180 / Math.PI]);
+                predictionCoords.push([futureLat, futureLng]);
             }
 
-            predictionLine.setLatLngs(futurePoints);
+            prediction.setLatLngs(predictionCoords);
+
+            // Update Live Data on Dashboard
+            document.getElementById("live-data").innerHTML = `
+                <strong>Latitude:</strong> ${latitude.toFixed(2)}<br>
+                <strong>Longitude:</strong> ${longitude.toFixed(2)}<br>
+                <strong>Altitude:</strong> ${geoPosition.height.toFixed(2)} km<br>
+                <strong>Speed:</strong> ${(7.66 * geoPosition.height).toFixed(2)} km/h<br>
+            `;
         }
 
-        // Update ISS position every 5 seconds
-        updateISS();
         setInterval(updateISS, 5000);
+        updateISS();
     </script>
 </body>
 </html>
