@@ -72,9 +72,19 @@
             maxZoom: 17
         }).addTo(map);
 
+        // Custom ISS Icon
+        const issIcon = L.icon({
+            iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/d/d0/International_Space_Station.svg',
+            iconSize: [50, 50], // size of the icon
+            iconAnchor: [25, 25], // point of the icon which will correspond to marker's location
+        });
+
         // ISS Marker
-        const issMarker = L.marker([0, 0]).addTo(map).bindPopup("Fetching ISS location...");
+        const issMarker = L.marker([0, 0], { icon: issIcon }).addTo(map).bindPopup("Fetching ISS location...");
         const trajectory = L.polyline([], { color: 'red', weight: 2 }).addTo(map);
+
+        // Store trajectory points
+        let trajectoryPoints = [];
 
         async function updateISS() {
             try {
@@ -92,11 +102,16 @@
                         Altitude: ${altitude.toFixed(2)} km
                     `).openPopup();
 
-                // Update Trajectory Path
-                trajectory.addLatLng([latitude, longitude]);
+                // Add point to trajectory
+                trajectoryPoints.push([latitude, longitude]);
 
-                // Update Map View
-                map.setView([latitude, longitude], 3);
+                // Keep only points within the last X hours (e.g., 1 hour)
+                const maxPoints = 720; // 1 hour of data with updates every 5 seconds
+                if (trajectoryPoints.length > maxPoints) {
+                    trajectoryPoints.shift();
+                }
+
+                trajectory.setLatLngs(trajectoryPoints);
 
                 // Update Satellite Data Section
                 document.getElementById("iss-info").innerHTML = `
